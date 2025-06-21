@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-List Neon Glow</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #818cf8; --primary-hover: #6366f1;
+            --glow-color: rgba(129, 140, 248, 0.6); --danger-glow-color: rgba(239, 68, 68, 0.7);
+        }
+        body {
+            font-family: 'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+            background-color: #0d0f1a;
+            background-image:
+                radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.3) 0px, transparent 50%),
+                radial-gradient(at 97% 21%, hsla(125, 98%, 72%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 52% 99%, hsla(355, 98%, 76%, 0.3) 0px, transparent 50%),
+                radial-gradient(at 10% 29%, hsla(256, 96%, 68%, 0.3) 0px, transparent 50%),
+                radial-gradient(at 97% 96%, hsla(38, 60%, 74%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 33% 50%, hsla(222, 67%, 73%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 79% 53%, hsla(343, 68%, 79%, 0.2) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        .main-container {
+            background: rgba(17, 24, 39, 0.6); 
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 50px rgba(8, 7, 16, 0.8);
+            transition: all 0.5s ease-in-out;
+        }
+        [data-view] { display: none; }
+        [data-view].active { display: block; }
+
+        /* All Lists View */
+        .list-card {
+            background: rgba(31, 41, 55, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .list-card:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 0 25px var(--glow-color);
+        }
+
+        /* Single List View */
+        .list-item.completed .item-name { text-decoration: line-through; color: #9ca3af; }
+        .list-item.completed .checkbox-icon {
+             background-color: var(--primary-color);
+             border-color: var(--primary-color);
+             box-shadow: 0 0 15px var(--glow-color);
+        }
+        .list-item.completed .checkbox-icon svg { transform: scale(1); opacity: 1; }
+        .checkbox-icon svg { transition: transform 0.2s ease, opacity 0.2s ease; transform: scale(0.5); opacity: 0; }
+        .btn-primary {
+            background-color: var(--primary-color);
+            box-shadow: 0 0 10px var(--glow-color), inset 0 0 5px rgba(255,255,255,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            box-shadow: 0 0 25px var(--glow-color), inset 0 0 5px rgba(255,255,255,0.3);
+        }
+        .delete-btn:hover { color: #ef4444; text-shadow: 0 0 10px var(--danger-glow-color); }
+        .focus-ring-primary:focus {
+            --tw-ring-color: var(--glow-color);
+            box-shadow: 0 0 0 2px #0d0f1a, 0 0 0 4px var(--primary-color), 0 0 20px var(--glow-color);
+        }
+        .capture-hide { display: none !important; }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fade-in 0.5s ease-out forwards; }
+        
+        /* ** NEW ** Style for the image export container */
+        #image-export-container {
+            position: absolute;
+            top: -9999px;
+            left: 0;
+            z-index: -10;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 text-gray-200">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-5xl main-container rounded-2xl overflow-hidden">
+        
+        <!-- View 1: All Lists -->
+        <div data-view="all-lists" class="p-6 sm:p-8 active fade-in">
+            <h1 class="text-4xl font-extrabold text-white mb-6" style="text-shadow: 0 0 8px #fff, 0 0 12px var(--primary-color);">Your Grocery Lists</h1>
+            
+            <form id="create-list-form" class="flex items-center gap-3 mb-8">
+                <input type="text" id="new-list-name-input" placeholder="Enter new list name..." class="flex-grow bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary focus:border-transparent transition text-white placeholder-gray-500" required>
+                <button type="submit" class="btn-primary text-white font-bold py-3 px-5 rounded-lg flex items-center justify-center shadow-lg transition-transform transform hover:scale-105">Create List</button>
+            </form>
+
+            <div id="lists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- List cards will be injected here -->
+            </div>
+            <p id="no-lists-message" class="text-center text-gray-400 py-10 text-lg hidden">No lists found. Create a new one using the form above.</p>
+        </div>
+
+        <!-- View 2: Single List -->
+        <div data-view="single-list" class="p-6 sm:p-8">
+            <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 header-section">
+                <div class="flex items-center gap-4">
+                    <button id="back-to-lists-btn" title="Back to All Lists" class="p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
+                    </button>
+                    <h1 id="list-title" class="text-4xl font-extrabold text-white"></h1>
+                </div>
+                 <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                     <button id="download-image-btn" title="Download as Image" class="p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </button>
+                    <button id="download-pdf-btn" title="Download as PDF" class="p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    </button>
+                </div>
+            </header>
+
+            <form id="add-item-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-8 bg-black/20 p-4 rounded-xl border border-white/10">
+                <input type="text" id="item-name-input" placeholder="Item Name" class="sm:col-span-5 w-full bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary" required>
+                <input type="text" id="item-qty-input" placeholder="Quantity" class="sm:col-span-3 w-full bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary">
+                <input type="text" id="item-unit-input" placeholder="Unit (kg, dozen, etc.)" class="sm:col-span-3 w-full bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary">
+                <button type="submit" class="sm:col-span-1 w-full btn-primary text-white font-bold rounded-lg flex items-center justify-center shadow-lg transform hover:scale-105">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                </button>
+            </form>
+
+            <div id="list-container" class="space-y-3"></div>
+            <p id="empty-list-message" class="text-center text-gray-400 py-10 text-lg hidden">This list is empty. Add an item using the form above.</p>
+        </div>
+    </div>
+    
+    <div id="image-export-container"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const { jsPDF } = window.jspdf;
+            const appState = {
+                lists: {},
+                activeListId: null,
+                currentView: 'all-lists',
+            };
+
+            // DOM Elements
+            const views = document.querySelectorAll('[data-view]');
+            const createListForm = document.getElementById('create-list-form');
+            const newListNameInput = document.getElementById('new-list-name-input');
+            const listsGrid = document.getElementById('lists-grid');
+            const noListsMessage = document.getElementById('no-lists-message');
+            const backToListsBtn = document.getElementById('back-to-lists-btn');
+            const listTitleElement = document.getElementById('list-title');
+            const addItemForm = document.getElementById('add-item-form');
+            const itemNameInput = document.getElementById('item-name-input');
+            const itemQtyInput = document.getElementById('item-qty-input');
+            const itemUnitInput = document.getElementById('item-unit-input');
+            const listContainer = document.getElementById('list-container');
+            const emptyListMessage = document.getElementById('empty-list-message');
+            const downloadImageBtn = document.getElementById('download-image-btn');
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            const imageExportContainer = document.getElementById('image-export-container');
+
+            const LISTS_KEY = 'neonMultiListWithUnits';
+
+            // --- DATA & STATE MANAGEMENT ---
+            const saveState = () => localStorage.setItem(LISTS_KEY, JSON.stringify(appState.lists));
+            const loadState = () => {
+                const storedLists = localStorage.getItem(LISTS_KEY);
+                if (storedLists) appState.lists = JSON.parse(storedLists);
+            };
+
+            const switchView = (viewName, listId = null) => {
+                appState.currentView = viewName;
+                appState.activeListId = listId;
+                views.forEach(v => v.classList.remove('active', 'fade-in'));
+                const activeView = document.querySelector(`[data-view="${viewName}"]`);
+                activeView.classList.add('active');
+                setTimeout(() => activeView.classList.add('fade-in'), 10);
+                
+                if (viewName === 'all-lists') renderAllLists();
+                if (viewName === 'single-list') renderSingleList();
+            };
+
+            // --- ALL LISTS VIEW RENDERING ---
+            const renderAllLists = () => {
+                listsGrid.innerHTML = '';
+                const listIds = Object.keys(appState.lists);
+                noListsMessage.classList.toggle('hidden', listIds.length > 0);
+
+                listIds.forEach(id => {
+                    const list = appState.lists[id];
+                    const card = document.createElement('div');
+                    card.className = 'list-card rounded-xl p-6 flex flex-col justify-between';
+                    card.dataset.listId = id;
+                    
+                    const itemCount = list.items.length;
+                    const completedCount = list.items.filter(i => i.completed).length;
+
+                    card.innerHTML = `
+                        <div>
+                            <h2 class="text-2xl font-bold text-white mb-2">${list.name}</h2>
+                            <p class="text-gray-400">${completedCount} / ${itemCount} items complete</p>
+                        </div>
+                        <button data-action="delete-list" data-list-id="${id}" class="delete-btn text-gray-500 self-end mt-4 p-1 hover:bg-red-500/20 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    `;
+                    listsGrid.appendChild(card);
+                });
+            };
+
+            // --- SINGLE LIST VIEW RENDERING ---
+            const renderSingleList = () => {
+                const list = appState.lists[appState.activeListId];
+                if (!list) { switchView('all-lists'); return; }
+
+                listTitleElement.textContent = list.name;
+                listContainer.innerHTML = '';
+                emptyListMessage.classList.toggle('hidden', list.items.length > 0);
+                
+                const ul = document.createElement('ul');
+                ul.className = 'space-y-3';
+
+                list.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = `list-item flex items-center justify-between p-3 rounded-lg bg-black/20 ${item.completed ? 'completed' : ''}`;
+                    li.dataset.itemId = item.id;
+                    
+                    const quantityUnit = [item.quantity, item.unit].filter(Boolean).join(' ');
+
+                    li.innerHTML = `
+                         <div class="flex-grow mr-3">
+                            <span class="item-name font-semibold text-gray-100">${item.name}</span>
+                            ${quantityUnit ? `<p class="text-sm text-gray-400">${quantityUnit}</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <div class="checkbox-icon w-6 h-6 border-2 border-gray-600 rounded-full flex items-center justify-center transition-all cursor-pointer" data-action="toggle">
+                                <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <button class="delete-btn text-gray-500 transition-all p-1" data-action="delete-item">
+                                <svg class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                    `;
+                    ul.appendChild(li);
+                });
+                listContainer.appendChild(ul);
+            };
+
+            // --- ACTIONS ---
+            const createList = (name) => {
+                const id = Date.now().toString();
+                appState.lists[id] = { name, items: [] };
+                saveState();
+                renderAllLists();
+            };
+            const deleteList = (id) => {
+                if (confirm(`Are you sure you want to delete the "${appState.lists[id].name}" list?`)) {
+                    delete appState.lists[id];
+                    saveState();
+                    renderAllLists();
+                }
+            };
+             const addItem = (name, quantity, unit) => {
+                const list = appState.lists[appState.activeListId];
+                if (!list) return;
+                list.items.push({ id: Date.now(), name, quantity, unit, completed: false });
+                saveState();
+                renderSingleList();
+            };
+            const toggleItem = (itemId) => {
+                const list = appState.lists[appState.activeListId];
+                const item = list.items.find(i => i.id == itemId);
+                if(item) item.completed = !item.completed;
+                saveState();
+                renderSingleList();
+            };
+            const deleteItem = (itemId) => {
+                 const list = appState.lists[appState.activeListId];
+                 list.items = list.items.filter(i => i.id != itemId);
+                 saveState();
+                 renderSingleList();
+            };
+
+            // --- EVENT LISTENERS ---
+            createListForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const listName = newListNameInput.value.trim();
+                if (listName) {
+                    createList(listName);
+                    newListNameInput.value = '';
+                }
+            });
+
+            listsGrid.addEventListener('click', (e) => {
+                const listCard = e.target.closest('.list-card');
+                if (!listCard) return;
+
+                const actionElement = e.target.closest('[data-action="delete-list"]');
+                if (actionElement) {
+                    e.stopPropagation();
+                    deleteList(actionElement.dataset.listId);
+                } else {
+                    switchView('single-list', listCard.dataset.listId);
+                }
+            });
+            
+            backToListsBtn.addEventListener('click', () => switchView('all-lists'));
+
+            addItemForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = itemNameInput.value.trim();
+                if(name) {
+                    addItem(name, itemQtyInput.value.trim(), itemUnitInput.value.trim());
+                    addItemForm.reset();
+                    itemNameInput.focus();
+                }
+            });
+
+            listContainer.addEventListener('click', (e) => {
+                const actionElement = e.target.closest('[data-action]');
+                if(!actionElement) return;
+
+                const itemId = actionElement.closest('.list-item').dataset.itemId;
+                const action = actionElement.dataset.action;
+
+                if(action === 'toggle') toggleItem(itemId);
+                if(action === 'delete-item') deleteItem(itemId);
+            });
+            
+            // --- DOWNLOADS ---
+            downloadImageBtn.addEventListener('click', () => {
+                const list = appState.lists[appState.activeListId];
+                if (!list || list.items.length === 0) { alert("The list is empty!"); return; }
+                
+                let listHtml = `<div class="bg-white p-10 text-black font-sans w-[800px]">`;
+                listHtml += `<h1 class="text-4xl font-bold mb-8 border-b pb-4 text-gray-800">${list.name}</h1>`;
+                let itemNumber = 1;
+                const itemsToExport = list.items.filter(item => !item.completed);
+                if (itemsToExport.length > 0) {
+                     itemsToExport.forEach(item => {
+                         const quantityUnit = [item.quantity, item.unit].filter(Boolean).join(' ');
+                        listHtml += `<p class="text-lg text-gray-800 py-1">${itemNumber++}. ${item.name} ${quantityUnit ? `(${quantityUnit})` : ''}</p>`;
+                    });
+                } else {
+                    listHtml += `<p class="text-lg text-gray-500">All items purchased!</p>`;
+                }
+                listHtml += `</div>`;
+                imageExportContainer.innerHTML = listHtml;
+                
+                // Use a short timeout to allow the browser to render the hidden div
+                setTimeout(() => {
+                    html2canvas(imageExportContainer, { scale: 2 }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = `${list.name.replace(/ /g, "_")}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        imageExportContainer.innerHTML = ''; // Clean up after capture
+                    }).catch(e => {
+                        console.error("Error downloading image:", e);
+                        alert("Could not download the image.");
+                    });
+                }, 100);
+            });
+            
+             downloadPdfBtn.addEventListener('click', async () => {
+                const list = appState.lists[appState.activeListId];
+                if (!list || list.items.length === 0) { alert("The list is empty!"); return; }
+                
+                document.querySelector('[data-view="single-list"] .header-section .flex.items-center.gap-2').classList.add('capture-hide');
+                addItemForm.classList.add('capture-hide');
+
+                try {
+                    const canvas = await html2canvas(document.querySelector('[data-view="single-list"]'), { backgroundColor: '#0d0f1a', scale: 2 });
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: [canvas.width, canvas.height] });
+                    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                    pdf.save(`${list.name.replace(/ /g, "_")}.pdf`);
+                } catch(e) {
+                     console.error("Error downloading PDF:", e);
+                    alert("Could not download the PDF.");
+                } finally {
+                    document.querySelector('[data-view="single-list"] .header-section .flex.items-center.gap-2').classList.remove('capture-hide');
+                    addItemForm.classList.remove('capture-hide');
+                }
+             });
+
+            // --- INITIALIZATION ---
+            loadState();
+            switchView('all-lists');
+        });
+    </script>
+</body>
+</html>
