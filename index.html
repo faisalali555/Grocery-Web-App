@@ -3,111 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-List Neon Glow</title>
+    <title>Make Your Grocery List</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         :root {
-            --primary-color: #818cf8; --primary-hover: #6366f1;
-            --glow-color: rgba(129, 140, 248, 0.6); --danger-glow-color: rgba(239, 68, 68, 0.7);
+            --primary-color: #2dd4bf; /* Teal-400 */
+            --primary-hover: #14b8a6; /* Teal-500 */
+            --glow-color: rgba(45, 212, 191, 0.5);
+            --danger-glow-color: rgba(239, 68, 68, 0.7);
+        }
+        @keyframes aurora {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         body {
             font-family: 'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-            background-color: #0d0f1a;
-            background-image:
-                radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.3) 0px, transparent 50%),
-                radial-gradient(at 97% 21%, hsla(125, 98%, 72%, 0.2) 0px, transparent 50%),
-                radial-gradient(at 52% 99%, hsla(355, 98%, 76%, 0.3) 0px, transparent 50%),
-                radial-gradient(at 10% 29%, hsla(256, 96%, 68%, 0.3) 0px, transparent 50%),
-                radial-gradient(at 97% 96%, hsla(38, 60%, 74%, 0.2) 0px, transparent 50%),
-                radial-gradient(at 33% 50%, hsla(222, 67%, 73%, 0.2) 0px, transparent 50%),
-                radial-gradient(at 79% 53%, hsla(343, 68%, 79%, 0.2) 0px, transparent 50%);
-            background-attachment: fixed;
+            background-color: #020617; /* Slate-950 */
+            background: linear-gradient(-45deg, #020617, #030712, #1e1b4b, #047857);
+            background-size: 400% 400%;
+            animation: aurora 25s ease infinite;
         }
         .main-container {
-            background: rgba(17, 24, 39, 0.6); 
+            background: rgba(15, 23, 42, 0.6); 
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 0 50px rgba(8, 7, 16, 0.8);
-            transition: all 0.5s ease-in-out;
         }
         [data-view] { display: none; }
         [data-view].active { display: block; }
-
-        /* All Lists View */
         .list-card {
-            background: rgba(31, 41, 55, 0.5);
+            background: rgba(30, 41, 59, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
             cursor: pointer;
         }
         .list-card:hover {
-            border-color: rgba(255, 255, 255, 0.25);
+            border-color: rgba(45, 212, 191, 0.5);
             transform: translateY(-5px) scale(1.02);
             box-shadow: 0 0 25px var(--glow-color);
         }
+        .progress-ring-circle { transition: stroke-dashoffset 0.5s ease-out; }
 
-        /* Single List View */
+        .list-item { transition: all 0.2s ease-in-out; }
         .list-item.completed .item-name { text-decoration: line-through; color: #9ca3af; }
         .list-item.completed .checkbox-icon {
              background-color: var(--primary-color);
              border-color: var(--primary-color);
              box-shadow: 0 0 15px var(--glow-color);
         }
+        .list-item.item-editing {
+            background-color: rgba(15, 118, 110, 0.4); /* Teal-700 with opacity */
+            box-shadow: 0 0 25px var(--glow-color);
+            border-color: var(--primary-color);
+        }
         .list-item.completed .checkbox-icon svg { transform: scale(1); opacity: 1; }
         .checkbox-icon svg { transition: transform 0.2s ease, opacity 0.2s ease; transform: scale(0.5); opacity: 0; }
         .btn-primary {
             background-color: var(--primary-color);
-            box-shadow: 0 0 10px var(--glow-color), inset 0 0 5px rgba(255,255,255,0.3);
-            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 0 10px var(--glow-color), inset 0 0 5px rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
         }
         .btn-primary:hover {
             background-color: var(--primary-hover);
-            box-shadow: 0 0 25px var(--glow-color), inset 0 0 5px rgba(255,255,255,0.3);
+            box-shadow: 0 0 25px var(--glow-color), inset 0 0 5px rgba(255,255,255,0.2);
         }
-        .delete-btn:hover { color: #ef4444; text-shadow: 0 0 10px var(--danger-glow-color); }
-        .focus-ring-primary:focus {
-            --tw-ring-color: var(--glow-color);
-            box-shadow: 0 0 0 2px #0d0f1a, 0 0 0 4px var(--primary-color), 0 0 20px var(--glow-color);
+        .delete-btn:hover, .edit-btn:hover { color: #fff; text-shadow: 0 0 8px #fff; }
+        
+        .sortable-ghost { opacity: 0.4; background: var(--primary-color); }
+        .sortable-chosen { cursor: grabbing; }
+        .list-item:not(.item-editing) { cursor: grab; }
+
+        .suggestion-btn {
+            background-color: rgba(19, 78, 74, 0.5);
+            border: 1px solid rgba(45, 212, 191, 0.3);
+            transition: all 0.2s ease;
         }
+        .suggestion-btn:hover {
+            background-color: rgba(45, 212, 191, 0.3);
+            border-color: var(--primary-color);
+            color: #fff;
+        }
+        #image-export-container { position: absolute; top: -9999px; left: 0; z-index: -10; }
         .capture-hide { display: none !important; }
+        
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fade-in 0.5s ease-out forwards; }
         
-        /* ** NEW ** Style for the image export container */
-        #image-export-container {
-            position: absolute;
-            top: -9999px;
-            left: 0;
-            z-index: -10;
+        .modal { transition: opacity 0.25s ease; }
+        .modal-content {
+             background: rgba(15, 23, 42, 0.8);
+             backdrop-filter: blur(15px);
+             border: 1px solid rgba(255, 255, 255, 0.1);
+             transition: transform 0.25s ease;
         }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4 text-gray-200">
 
-    <!-- Main Container -->
+    <div id="developer-credits" class="fixed bottom-5 right-6 bg-black/40 backdrop-blur-md text-sm text-teal-300 px-4 py-2 rounded-full border border-teal-400/30 transition-all hover:shadow-2xl hover:shadow-teal-500/50 hover:-translate-y-1" style="text-shadow: 0 0 8px var(--glow-color);">
+        Developed by <strong>Muhammad Faisal Ali 💗</strong>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block ml-1 text-teal-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.48 5.088a.75.75 0 01.087 1.05l-3.25 4.5a.75.75 0 01-1.137.087L5.75 10.75a.75.75 0 111.06-1.06l1.72 1.72 2.7-3.75a.75.75 0 011.05-.087z" clip-rule="evenodd" />
+        </svg>
+    </div>
+
     <div class="w-full max-w-5xl main-container rounded-2xl overflow-hidden">
         
-        <!-- View 1: All Lists -->
         <div data-view="all-lists" class="p-6 sm:p-8 active fade-in">
-            <h1 class="text-4xl font-extrabold text-white mb-6" style="text-shadow: 0 0 8px #fff, 0 0 12px var(--primary-color);">Your Grocery Lists</h1>
-            
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+                <h1 class="text-4xl font-extrabold text-white" style="text-shadow: 0 0 8px #fff, 0 0 12px var(--primary-color);">Your Grocery Lists</h1>
+                <div class="flex items-center gap-3 mt-4 sm:mt-0">
+                    <button id="import-btn" class="bg-slate-700/50 hover:bg-slate-600/50 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 border border-slate-600/80 transition">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        Import
+                    </button>
+                    <button id="export-btn" class="bg-slate-700/50 hover:bg-slate-600/50 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 border border-slate-600/80 transition">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Export
+                    </button>
+                    <input type="file" id="import-file-input" class="hidden" accept=".json">
+                </div>
+            </div>
             <form id="create-list-form" class="flex items-center gap-3 mb-8">
-                <input type="text" id="new-list-name-input" placeholder="Enter new list name..." class="flex-grow bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary focus:border-transparent transition text-white placeholder-gray-500" required>
+                <input type="text" id="new-list-name-input" placeholder="Enter new list name..." class="flex-grow bg-slate-900/70 border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[var(--primary-color)] transition text-white placeholder-slate-500" required>
                 <button type="submit" class="btn-primary text-white font-bold py-3 px-5 rounded-lg flex items-center justify-center shadow-lg transition-transform transform hover:scale-105">Create List</button>
             </form>
-
-            <div id="lists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- List cards will be injected here -->
-            </div>
-            <p id="no-lists-message" class="text-center text-gray-400 py-10 text-lg hidden">No lists found. Create a new one using the form above.</p>
+            <div id="lists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            <p id="no-lists-message" class="text-center text-gray-400 py-10 text-lg hidden">No lists found. Create a new one to get started.</p>
         </div>
 
-        <!-- View 2: Single List -->
         <div data-view="single-list" class="p-6 sm:p-8">
             <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 header-section">
                 <div class="flex items-center gap-4">
@@ -117,39 +147,50 @@
                     <h1 id="list-title" class="text-4xl font-extrabold text-white"></h1>
                 </div>
                  <div class="flex items-center gap-2 mt-4 sm:mt-0">
-                     <button id="download-image-btn" title="Download as Image" class="p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
+                    <button id="download-image-btn" title="Download as Image" class="p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    </button>
-                    <button id="download-pdf-btn" title="Download as PDF" class="p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     </button>
                 </div>
             </header>
 
-            <form id="add-item-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-8 bg-black/20 p-4 rounded-xl border border-white/10">
-                <input type="text" id="item-name-input" placeholder="Item Name" class="sm:col-span-5 w-full bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary" required>
-                <input type="text" id="item-qty-input" placeholder="Quantity" class="sm:col-span-3 w-full bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary">
-                <input type="text" id="item-unit-input" placeholder="Unit (kg, dozen, etc.)" class="sm:col-span-3 w-full bg-gray-900/70 border-gray-700 rounded-lg px-4 py-3 focus-ring-primary">
+            <form id="add-item-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-6 bg-black/20 p-4 rounded-xl border border-white/10">
+                <input type="text" id="item-name-input" placeholder="Item Name" class="sm:col-span-5 w-full bg-slate-900/70 border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[var(--primary-color)]" required>
+                <input type="text" id="item-qty-input" placeholder="Quantity" class="sm:col-span-3 w-full bg-slate-900/70 border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[var(--primary-color)]">
+                <input type="text" id="item-unit-input" placeholder="Unit (kg, etc.)" class="sm:col-span-3 w-full bg-slate-900/70 border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[var(--primary-color)]">
                 <button type="submit" class="sm:col-span-1 w-full btn-primary text-white font-bold rounded-lg flex items-center justify-center shadow-lg transform hover:scale-105">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                 </button>
             </form>
+            
+            <div id="suggestions-container" class="mb-6"></div>
 
-            <div id="list-container" class="space-y-3"></div>
+            <ul id="list-container" class="space-y-3"></ul>
             <p id="empty-list-message" class="text-center text-gray-400 py-10 text-lg hidden">This list is empty. Add an item using the form above.</p>
         </div>
     </div>
-    
     <div id="image-export-container"></div>
-
+    
+    <div id="confirmation-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 opacity-0 pointer-events-none z-50">
+        <div class="modal-content w-full max-w-sm rounded-lg shadow-xl p-6 transform scale-95">
+            <h3 id="modal-title" class="text-lg font-bold text-white">Confirm Action</h3>
+            <p id="modal-message" class="mt-2 text-sm text-gray-300">Are you sure?</p>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button data-action="cancel" class="px-4 py-2 bg-slate-600 text-slate-200 rounded-md hover:bg-slate-500 font-semibold">Cancel</button>
+                <button data-action="confirm" id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const { jsPDF } = window.jspdf;
             const appState = {
                 lists: {},
+                frequentItems: {},
                 activeListId: null,
                 currentView: 'all-lists',
             };
+            let sortableInstance = null;
+            let onConfirmAction = null;
 
             // DOM Elements
             const views = document.querySelectorAll('[data-view]');
@@ -165,17 +206,55 @@
             const itemUnitInput = document.getElementById('item-unit-input');
             const listContainer = document.getElementById('list-container');
             const emptyListMessage = document.getElementById('empty-list-message');
+            const suggestionsContainer = document.getElementById('suggestions-container');
             const downloadImageBtn = document.getElementById('download-image-btn');
-            const downloadPdfBtn = document.getElementById('download-pdf-btn');
             const imageExportContainer = document.getElementById('image-export-container');
+            const exportBtn = document.getElementById('export-btn');
+            const importBtn = document.getElementById('import-btn');
+            const importFileInput = document.getElementById('import-file-input');
+            const confirmationModal = document.getElementById('confirmation-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 
-            const LISTS_KEY = 'neonMultiListWithUnits';
+            const LISTS_KEY = 'auroraGroceryApp_lists_v1';
+            const FREQUENCY_KEY = 'auroraGroceryApp_freq_v1';
+
+            // --- Modal Logic ---
+            const showConfirmationModal = (title, message, confirmCallback) => {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                onConfirmAction = confirmCallback;
+                confirmationModal.classList.remove('opacity-0', 'pointer-events-none');
+                confirmationModal.querySelector('.modal-content').classList.remove('scale-95');
+            };
+
+            const hideConfirmationModal = () => {
+                confirmationModal.classList.add('opacity-0', 'pointer-events-none');
+                confirmationModal.querySelector('.modal-content').classList.add('scale-95');
+                onConfirmAction = null;
+            };
+            
+            confirmationModal.addEventListener('click', (e) => {
+                const action = e.target.dataset.action;
+                if(action === 'cancel') hideConfirmationModal();
+                if(action === 'confirm' && typeof onConfirmAction === 'function') {
+                    onConfirmAction();
+                    hideConfirmationModal();
+                }
+            });
+
 
             // --- DATA & STATE MANAGEMENT ---
-            const saveState = () => localStorage.setItem(LISTS_KEY, JSON.stringify(appState.lists));
+            const saveState = () => {
+                localStorage.setItem(LISTS_KEY, JSON.stringify(appState.lists));
+                localStorage.setItem(FREQUENCY_KEY, JSON.stringify(appState.frequentItems));
+            };
             const loadState = () => {
                 const storedLists = localStorage.getItem(LISTS_KEY);
                 if (storedLists) appState.lists = JSON.parse(storedLists);
+                const storedFreq = localStorage.getItem(FREQUENCY_KEY);
+                if (storedFreq) appState.frequentItems = JSON.parse(storedFreq);
             };
 
             const switchView = (viewName, listId = null) => {
@@ -199,20 +278,37 @@
                 listIds.forEach(id => {
                     const list = appState.lists[id];
                     const card = document.createElement('div');
-                    card.className = 'list-card rounded-xl p-6 flex flex-col justify-between';
+                    card.className = 'list-card rounded-xl p-5 flex flex-col justify-between';
                     card.dataset.listId = id;
                     
                     const itemCount = list.items.length;
                     const completedCount = list.items.filter(i => i.completed).length;
+                    const percentage = itemCount > 0 ? Math.round((completedCount / itemCount) * 100) : 0;
+                    const circumference = 2 * Math.PI * 45;
+                    const offset = circumference - (percentage / 100) * circumference;
 
                     card.innerHTML = `
-                        <div>
-                            <h2 class="text-2xl font-bold text-white mb-2">${list.name}</h2>
-                            <p class="text-gray-400">${completedCount} / ${itemCount} items complete</p>
+                        <div class="flex items-center justify-between">
+                            <h2 data-list-name-id="${id}" class="text-2xl font-bold text-white mb-2">${list.name}</h2>
+                            <div class="flex items-center gap-1">
+                                <button data-action="edit-list" title="Edit list name" class="edit-btn text-gray-500 p-1 hover:bg-white/10 rounded-full">
+                                    <svg class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                                <button data-action="delete-list" title="Delete list" class="delete-btn text-gray-500 p-1 hover:bg-red-500/20 rounded-full">
+                                    <svg class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
                         </div>
-                        <button data-action="delete-list" data-list-id="${id}" class="delete-btn text-gray-500 self-end mt-4 p-1 hover:bg-red-500/20 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
+                        <div class="flex items-center gap-4 mt-4">
+                            <div class="relative w-20 h-20">
+                                <svg class="w-full h-full" viewBox="0 0 100 100">
+                                    <circle class="text-slate-700" stroke-width="8" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
+                                    <circle class="progress-ring-circle text-[var(--primary-color)]" style="filter: drop-shadow(0 0 5px var(--glow-color));" stroke-width="8" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" transform="rotate(-90 50 50)" />
+                                </svg>
+                                <span class="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">${percentage}%</span>
+                            </div>
+                            <p class="text-gray-400 flex-1">${completedCount} of ${itemCount} items complete</p>
+                        </div>
                     `;
                     listsGrid.appendChild(card);
                 });
@@ -227,33 +323,92 @@
                 listContainer.innerHTML = '';
                 emptyListMessage.classList.toggle('hidden', list.items.length > 0);
                 
-                const ul = document.createElement('ul');
-                ul.className = 'space-y-3';
-
                 list.items.forEach(item => {
                     const li = document.createElement('li');
-                    li.className = `list-item flex items-center justify-between p-3 rounded-lg bg-black/20 ${item.completed ? 'completed' : ''}`;
+                    li.className = `list-item flex items-center justify-between p-3 rounded-lg bg-black/20`;
+                    li.classList.toggle('completed', item.completed);
+                    li.classList.toggle('item-editing', item.isEditing);
                     li.dataset.itemId = item.id;
                     
                     const quantityUnit = [item.quantity, item.unit].filter(Boolean).join(' ');
 
-                    li.innerHTML = `
-                         <div class="flex-grow mr-3">
-                            <span class="item-name font-semibold text-gray-100">${item.name}</span>
-                            ${quantityUnit ? `<p class="text-sm text-gray-400">${quantityUnit}</p>` : ''}
-                        </div>
-                        <div class="flex items-center gap-3 flex-shrink-0">
-                            <div class="checkbox-icon w-6 h-6 border-2 border-gray-600 rounded-full flex items-center justify-center transition-all cursor-pointer" data-action="toggle">
-                                <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    if (item.isEditing) {
+                        li.innerHTML = `
+                        <form data-action="save-edit" class="w-full flex items-center gap-2">
+                           <input name="name" class="flex-grow bg-slate-800 border-slate-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[var(--primary-color)] text-white" value="${item.name}" required>
+                           <input name="quantity" class="w-24 bg-slate-800 border-slate-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[var(--primary-color)] text-white" value="${item.quantity || ''}">
+                           <input name="unit" class="w-24 bg-slate-800 border-slate-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[var(--primary-color)] text-white" value="${item.unit || ''}">
+                           <button type="submit" class="p-2 rounded-full hover:bg-green-500/20 text-green-400">
+                               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                           </button>
+                           <button type="button" data-action="cancel-edit" class="p-2 rounded-full hover:bg-red-500/20 text-red-400">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                           </button>
+                        </form>
+                        `;
+                    } else {
+                         li.innerHTML = `
+                             <div class="flex-grow mr-3">
+                                <span class="item-name font-semibold text-gray-100">${item.name}</span>
+                                ${quantityUnit ? `<p class="text-sm text-gray-400">${quantityUnit}</p>` : ''}
                             </div>
-                            <button class="delete-btn text-gray-500 transition-all p-1" data-action="delete-item">
-                                <svg class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        </div>
-                    `;
-                    ul.appendChild(li);
+                            <div class="flex items-center gap-3 flex-shrink-0">
+                                <button class="edit-btn text-gray-500 transition-all p-1" data-action="edit-item">
+                                    <svg class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                                <div class="checkbox-icon w-6 h-6 border-2 border-slate-600 rounded-full flex items-center justify-center transition-all cursor-pointer" data-action="toggle">
+                                    <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <button class="delete-btn text-gray-500 transition-all p-1" data-action="delete-item">
+                                    <svg class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                        `;
+                    }
+                    listContainer.appendChild(li);
                 });
-                listContainer.appendChild(ul);
+                
+                renderSuggestions();
+                initSortable();
+            };
+            
+            const renderSuggestions = () => {
+                suggestionsContainer.innerHTML = '';
+                const currentList = appState.lists[appState.activeListId];
+                if (!currentList) return;
+
+                const currentItemNames = new Set(currentList.items.map(i => i.name.toLowerCase()));
+                
+                const sortedFrequentItems = Object.entries(appState.frequentItems)
+                    .sort(([,a], [,b]) => b - a)
+                    .map(([name]) => name)
+                    .filter(name => !currentItemNames.has(name.toLowerCase()))
+                    .slice(0, 5);
+                
+                if (sortedFrequentItems.length > 0) {
+                    let suggestionsHTML = `<div class="p-4 bg-black/20 rounded-xl border border-white/10"><h3 class="font-bold text-gray-300 mb-3">Frequent Items</h3><div class="flex flex-wrap gap-2">`;
+                    sortedFrequentItems.forEach(name => {
+                        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+                        suggestionsHTML += `<button class="suggestion-btn text-gray-300 px-3 py-1 rounded-full text-sm" data-action="add-suggestion" data-name="${name}">${capitalizedName}</button>`;
+                    });
+                    suggestionsHTML += `</div></div>`;
+                    suggestionsContainer.innerHTML = suggestionsHTML;
+                }
+            };
+            
+            const initSortable = () => {
+                if (sortableInstance) sortableInstance.destroy();
+                sortableInstance = new Sortable(listContainer, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: (evt) => {
+                        const list = appState.lists[appState.activeListId];
+                        const [reorderedItem] = list.items.splice(evt.oldIndex, 1);
+                        list.items.splice(evt.newIndex, 0, reorderedItem);
+                        saveState();
+                    }
+                });
             };
 
             // --- ACTIONS ---
@@ -264,24 +419,55 @@
                 renderAllLists();
             };
             const deleteList = (id) => {
-                if (confirm(`Are you sure you want to delete the "${appState.lists[id].name}" list?`)) {
+                const listName = appState.lists[id].name;
+                showConfirmationModal('Delete List', `Are you sure you want to delete the "${listName}" list?`, () => {
                     delete appState.lists[id];
                     saveState();
                     renderAllLists();
-                }
+                });
+            };
+            const handleEditListName = (listId) => {
+                const listNameElement = document.querySelector(`[data-list-name-id="${listId}"]`);
+                if (!listNameElement) return;
+
+                listNameElement.contentEditable = true;
+                listNameElement.focus();
+                document.execCommand('selectAll', false, null);
+
+                const saveEdit = () => {
+                    listNameElement.contentEditable = false;
+                    const newName = listNameElement.textContent.trim();
+                    if (newName && newName !== appState.lists[listId].name) {
+                        appState.lists[listId].name = newName;
+                        saveState();
+                    } else {
+                        listNameElement.textContent = appState.lists[listId].name;
+                    }
+                };
+                listNameElement.addEventListener('blur', saveEdit, { once: true });
+                listNameElement.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); listNameElement.blur(); }
+                    else if (e.key === 'Escape') { listNameElement.contentEditable = false; listNameElement.textContent = appState.lists[listId].name; }
+                });
             };
              const addItem = (name, quantity, unit) => {
                 const list = appState.lists[appState.activeListId];
                 if (!list) return;
-                list.items.push({ id: Date.now(), name, quantity, unit, completed: false });
+                list.items.push({ id: Date.now(), name, quantity, unit, completed: false, isEditing: false });
+                updateFrequency(name);
                 saveState();
                 renderSingleList();
+            };
+            const updateFrequency = (name) => {
+                const lowerCaseName = name.toLowerCase().trim();
+                appState.frequentItems[lowerCaseName] = (appState.frequentItems[lowerCaseName] || 0) + 1;
             };
             const toggleItem = (itemId) => {
                 const list = appState.lists[appState.activeListId];
                 const item = list.items.find(i => i.id == itemId);
                 if(item) item.completed = !item.completed;
                 saveState();
+                renderAllLists();
                 renderSingleList();
             };
             const deleteItem = (itemId) => {
@@ -290,27 +476,46 @@
                  saveState();
                  renderSingleList();
             };
+            const editItem = (itemId, isEditing) => {
+                const list = appState.lists[appState.activeListId];
+                list.items.forEach(i => i.isEditing = false);
+                const item = list.items.find(i => i.id == itemId);
+                if(item) item.isEditing = isEditing;
+                renderSingleList();
+            };
+            const saveItemEdit = (itemId, form) => {
+                const list = appState.lists[appState.activeListId];
+                const item = list.items.find(i => i.id == itemId);
+                if(item){
+                    item.name = form.elements.name.value.trim();
+                    item.quantity = form.elements.quantity.value.trim();
+                    item.unit = form.elements.unit.value.trim();
+                    item.isEditing = false;
+                    updateFrequency(item.name);
+                }
+                saveState();
+                renderSingleList();
+            };
 
             // --- EVENT LISTENERS ---
             createListForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const listName = newListNameInput.value.trim();
-                if (listName) {
-                    createList(listName);
-                    newListNameInput.value = '';
-                }
+                if (listName) createList(listName);
+                newListNameInput.value = '';
             });
 
             listsGrid.addEventListener('click', (e) => {
-                const listCard = e.target.closest('.list-card');
-                if (!listCard) return;
-
-                const actionElement = e.target.closest('[data-action="delete-list"]');
+                const actionElement = e.target.closest('[data-action]');
                 if (actionElement) {
                     e.stopPropagation();
-                    deleteList(actionElement.dataset.listId);
+                    const listId = actionElement.closest('.list-card').dataset.listId;
+                    const action = actionElement.dataset.action;
+                    if(action === 'delete-list') deleteList(listId);
+                    if(action === 'edit-list') handleEditListName(listId);
                 } else {
-                    switchView('single-list', listCard.dataset.listId);
+                    const listCard = e.target.closest('.list-card');
+                    if(listCard) switchView('single-list', listCard.dataset.listId);
                 }
             });
             
@@ -329,15 +534,29 @@
             listContainer.addEventListener('click', (e) => {
                 const actionElement = e.target.closest('[data-action]');
                 if(!actionElement) return;
-
                 const itemId = actionElement.closest('.list-item').dataset.itemId;
                 const action = actionElement.dataset.action;
-
                 if(action === 'toggle') toggleItem(itemId);
                 if(action === 'delete-item') deleteItem(itemId);
+                if(action === 'edit-item') editItem(itemId, true);
+                if(action === 'cancel-edit') editItem(itemId, false);
+            });
+            listContainer.addEventListener('submit', (e) => {
+                 e.preventDefault();
+                 const actionElement = e.target.closest('[data-action]');
+                 if (actionElement && actionElement.dataset.action === 'save-edit'){
+                     const itemId = actionElement.closest('.list-item').dataset.itemId;
+                     saveItemEdit(itemId, e.target);
+                 }
+            });
+            suggestionsContainer.addEventListener('click', (e) => {
+                const suggestionBtn = e.target.closest('[data-action="add-suggestion"]');
+                if (suggestionBtn) {
+                    addItem(suggestionBtn.dataset.name, '', '');
+                }
             });
             
-            // --- DOWNLOADS ---
+            // --- DOWNLOAD & IMPORT/EXPORT LISTENERS ---
             downloadImageBtn.addEventListener('click', () => {
                 const list = appState.lists[appState.activeListId];
                 if (!list || list.items.length === 0) { alert("The list is empty!"); return; }
@@ -357,42 +576,67 @@
                 listHtml += `</div>`;
                 imageExportContainer.innerHTML = listHtml;
                 
-                // Use a short timeout to allow the browser to render the hidden div
                 setTimeout(() => {
-                    html2canvas(imageExportContainer, { scale: 2 }).then(canvas => {
+                    html2canvas(imageExportContainer.querySelector('div'), { scale: 2 }).then(canvas => {
                         const link = document.createElement('a');
                         link.download = `${list.name.replace(/ /g, "_")}.png`;
                         link.href = canvas.toDataURL('image/png');
                         link.click();
-                        imageExportContainer.innerHTML = ''; // Clean up after capture
+                        imageExportContainer.innerHTML = '';
                     }).catch(e => {
                         console.error("Error downloading image:", e);
                         alert("Could not download the image.");
                     });
                 }, 100);
             });
-            
-             downloadPdfBtn.addEventListener('click', async () => {
-                const list = appState.lists[appState.activeListId];
-                if (!list || list.items.length === 0) { alert("The list is empty!"); return; }
-                
-                document.querySelector('[data-view="single-list"] .header-section .flex.items-center.gap-2').classList.add('capture-hide');
-                addItemForm.classList.add('capture-hide');
 
-                try {
-                    const canvas = await html2canvas(document.querySelector('[data-view="single-list"]'), { backgroundColor: '#0d0f1a', scale: 2 });
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: [canvas.width, canvas.height] });
-                    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-                    pdf.save(`${list.name.replace(/ /g, "_")}.pdf`);
-                } catch(e) {
-                     console.error("Error downloading PDF:", e);
-                    alert("Could not download the PDF.");
-                } finally {
-                    document.querySelector('[data-view="single-list"] .header-section .flex.items-center.gap-2').classList.remove('capture-hide');
-                    addItemForm.classList.remove('capture-hide');
+            exportBtn.addEventListener('click', () => {
+                if(Object.keys(appState.lists).length === 0){
+                    alert("No data to export.");
+                    return;
                 }
-             });
+                const dataToExport = {
+                    lists: appState.lists,
+                    frequentItems: appState.frequentItems
+                };
+                const dataStr = JSON.stringify(dataToExport, null, 2);
+                const dataBlob = new Blob([dataStr], {type: "application/json"});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.download = "grocery_data_backup.json";
+                link.href = url;
+                link.click();
+                URL.revokeObjectURL(url);
+            });
+
+            importBtn.addEventListener('click', () => {
+                importFileInput.click();
+            });
+
+            importFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        showConfirmationModal("Confirm Import", "Are you sure? Importing will overwrite all your current data.", () => {
+                            appState.lists = importedData.lists || {};
+                            appState.frequentItems = importedData.frequentItems || {};
+                            saveState();
+                            renderAllLists();
+                        });
+                    } catch (err) {
+                        alert("Error: Could not parse the file. Please make sure it's a valid export file.");
+                        console.error("Import error:", err);
+                    } finally {
+                        importFileInput.value = '';
+                    }
+                };
+                reader.readAsText(file);
+            });
+
 
             // --- INITIALIZATION ---
             loadState();
